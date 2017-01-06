@@ -25,31 +25,31 @@ main <- function() {
     
     for(country_name in c(
         'Malaysia',
-        'Colombia'#,
-        # 'Peru',
-        # 'Philippines',
-        # 'Senegal',
-        # 'Thailand',
-        # 'Madagascar',
-        # 'New Caledonia',
-        # 'Paraguay',
-        # 'South Africa',
-        # 'Chile',
-        # 'Japan',
-        # 'Portugal',
-        # 'Spain',
-        # 'Romania',
-        # 'France',
-        # 'Slovenia',
-        # 'Switzerland',
-        # 'Germany',
-        # 'Poland',
-        # 'United Kingdom',
-        # 'Denmark',
-        # 'Latvia',
-        # 'Sweden',
-        # 'Norway',
-        # 'Finland'
+        'Colombia',
+        'Peru',
+        'Philippines',
+        'Senegal',
+        'Thailand',
+        'Madagascar',
+        'New Caledonia',
+        'Paraguay',
+        'South Africa',
+        'Chile',
+        'Japan',
+        'Portugal',
+        'Spain',
+        'Romania',
+        'France',
+        'Slovenia',
+        'Switzerland',
+        'Germany',
+        'Poland',
+        'United Kingdom',
+        'Denmark',
+        'Latvia',
+        'Sweden',
+        'Norway',
+        'Finland'
     )) {
         df_country <- df_in %>% filter(country == country_name) %>%
             select(-country) %>%
@@ -124,6 +124,8 @@ process_remove_zeros <- function(df, env_var) {
 
 process_log_flu <- function(df) {
     df$flu <- log(df$flu)
+    df$flu[is.nan(df$flu)] <- NA
+    df$flu[is.infinite(df$flu)] <- NA
     df
 }
 

@@ -23,34 +23,8 @@ main <- function() {
         )
     ')
     
-    for(country_name in c(
-        'Malaysia',
-        'Colombia',
-        'Peru',
-        'Philippines',
-        'Senegal',
-        'Thailand',
-        'Madagascar',
-        'New Caledonia',
-        'Paraguay',
-        'South Africa',
-        'Chile',
-        'Japan',
-        'Portugal',
-        'Spain',
-        'Romania',
-        'France',
-        'Slovenia',
-        'Switzerland',
-        'Germany',
-        'Poland',
-        'United Kingdom',
-        'Denmark',
-        'Latvia',
-        'Sweden',
-        'Norway',
-        'Finland'
-    )) {
+    countries <- read.table(file.path(script_dir, 'countries.txt'), colClasses = 'character', sep = '\t')[,1]
+    for(country_name in countries) {
         df_country <- df_in %>% filter(country == country_name) %>%
             select(-country) %>%
             spread(variable, value) %>%

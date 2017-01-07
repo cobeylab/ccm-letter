@@ -6,8 +6,8 @@ These instructions assume Unix (e.g. Mac OS X or Linux) with R installed so that
 Rscript executable is in the current search path.
 
 
-INSTRUCTIONS
-------------
+GENERATING SURROGATE TEST RESULTS
+---------------------------------
 1. (Local and Cluster)
 
 Generate individual job directories in jobs/us=?-rz=?-usf=?-use=?-ulf=?-ev=?-fic=?
@@ -69,3 +69,24 @@ Combine output files from all jobs into a single SQLite database:
 ./gather.R
 
 which produces the file output_db_all.sqlite
+
+
+ADDING LAG TEST RESULTS TO DATABASE
+-----------------------------------
+1. Make sure the results are gathered in output_db_all.sqlite (see above).
+
+2. Run
+
+./run_lag_test.R
+
+
+GENERATING PLOTS AND RESULTS TABLE
+—————————————————————————————————
+1. Make sure the full results, and lag test results, are present in output_db_all.sqlite.
+
+2. Run
+
+./plot_all.R
+
+to generate plots for each test variant in the plots/ directory,
+and a LaTeX-formatted table snippet in summary-table.tex.

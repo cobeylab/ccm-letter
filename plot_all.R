@@ -15,11 +15,13 @@ main <- function() {
                 use_surr_flu <- use_surr_vec[1]
                 use_surr_env <- use_surr_vec[2]
                 for(use_log_flu in c(FALSE, TRUE)) {
-                    for(use_lagtest in c(FALSE, TRUE)) {
-                        plot_model(
-                            script_dir, db,
-                            use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, use_lagtest
-                        )
+                    for(flu_is_cause in c(FALSE, TRUE)) {
+                        for(use_lagtest in c(FALSE, TRUE)) {
+                            plot_model(
+                                script_dir, db,
+                                use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, flu_is_cause, use_lagtest
+                            )
+                        }
                     }
                 }
             }
@@ -51,7 +53,6 @@ plot_model_summary <- function(script_dir, db) {
         ORDER BY
             ccm_rho.use_log_flu, ccm_rho.use_surr_flu, ccm_rho.use_surr_env
     ')
-    print(df)
     
     table_file <- file(file.path(script_dir, 'summary-table.tex'), 'w')
     format_bool <- function(x) {
@@ -75,20 +76,31 @@ plot_model_summary <- function(script_dir, db) {
     close(table_file)
 }
 
-plot_model <- function(script_dir, db, use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, use_lagtest) {
+plot_model <- function(script_dir, db, use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, flu_is_cause, use_lagtest) {
     if(!dir.exists('plots')) {
         dir.create('plots')
     }
     
+    if(flu_is_cause) {
+        flu_cause_or_effect <- 'cause'
+        var_cause_or_effect <- 'effect'
+    }
+    else {
+        flu_cause_or_effect <- 'effect'
+        var_cause_or_effect <- 'cause'
+    }
+    
+    query <- sprintf('
+        SELECT ccm_rho.cause, ccm_rho.effect, ccm_rho.country, rho_sig_95, rho, rho_null_95, best_lag, rho_best_lag
+        FROM ccm_rho, ccm_lagtest
+        WHERE ccm_rho.use_splines = ? AND ccm_rho.remove_zeros = ? AND ccm_rho.use_surr_flu = ?
+            AND ccm_rho.use_surr_env = ? AND ccm_rho.use_log_flu = ? AND ccm_rho.%s = "flu"
+            AND ccm_lagtest.remove_zeros = ? AND ccm_lagtest.use_log_flu = ? and ccm_lagtest.%s = "flu"
+            AND ccm_rho.%s = ccm_lagtest.%s AND ccm_rho.country = ccm_lagtest.country
+    ', flu_cause_or_effect, flu_cause_or_effect, var_cause_or_effect, var_cause_or_effect)
+    
     df <- dbGetPreparedQuery(db, 
-        'SELECT ccm_rho.effect, ccm_rho.country, rho_sig_95, rho, rho_null_95, best_lag, rho_best_lag
-            FROM ccm_rho, ccm_lagtest
-            WHERE
-                ccm_rho.use_splines = ? AND ccm_rho.remove_zeros = ? AND ccm_rho.use_surr_flu = ?
-                AND ccm_rho.use_surr_env = ? AND ccm_rho.use_log_flu = ? AND ccm_rho.cause = "flu"
-                AND ccm_lagtest.remove_zeros = ? AND ccm_lagtest.use_log_flu = ? and ccm_lagtest.cause = "flu"
-                AND ccm_rho.effect = ccm_lagtest.effect AND ccm_rho.country = ccm_lagtest.country
-        ',
+        query,
         data.frame(
             ccm_rho.use_splines = use_splines, ccm_rho.remove_zeros = remove_zeros, ccm_rho.use_surr_flu = use_surr_flu,
             ccm_rho.use_surr_env = use_surr_env, ccm_rho.use_log_flu = use_log_flu,
@@ -97,15 +109,20 @@ plot_model <- function(script_dir, db, use_splines, remove_zeros, use_surr_flu, 
     )
     countries <- read.table(file.path(script_dir, 'countries.txt'), colClasses = 'character', sep = '\t')[,1]
     df$country_factor <- factor(df$country, levels = countries)
-    df$effect_factor <- factor(df$effect, levels = c('AH', 'T', 'RH', 'PRCP'))
-    
+    if(flu_is_cause) {
+        df$var_factor <- factor(df$effect, levels = c('AH', 'T', 'RH', 'PRCP'))
+    }
+    else {
+        df$var_factor <- factor(df$cause, levels = c('AH', 'T', 'RH', 'PRCP'))
+    }
+
     if(use_lagtest) {
         df$significant <- df$rho_sig_95 & (df$best_lag <= 0)
     }
     else {
         df$significant <- df$rho_sig_95
     }
-    
+
     p <- ggplot(data = df) +
         geom_point(aes(x = rho, y = 0, color = factor(significant), size = 1 + significant)) +
         scale_radius(range = c(0.5, 1)) +
@@ -113,12 +130,12 @@ plot_model <- function(script_dir, db, use_splines, remove_zeros, use_surr_flu, 
         geom_vline(aes(xintercept = rho_null_95), size = 0.25) +
         labs(x = 'cross-map correlation (flu drives env. variable)', y = NULL) +
         facet_grid(
-            country_factor ~ effect, switch = 'y',
-            labeller = labeller(effect = function(effect) {
-                df_sig_sum <- sapply(effect, function(eff) { sum(df$significant[df$effect == eff]) })
+            country_factor ~ var_factor, switch = 'y',
+            labeller = labeller(var_factor = function(var) {
+                df_sig_sum <- sapply(var, function(v) { sum(df$significant[df$var_factor == v]) })
                 label <- c(
                     AH = 'abs. hum.', RH = 'rel. hum.', T = 'temp.', PRCP = 'precip.'
-                )[effect]
+                )[as.character(var)]
                 sprintf('%s (%d/26)', label, df_sig_sum)
             })
         ) +
@@ -139,12 +156,12 @@ plot_model <- function(script_dir, db, use_splines, remove_zeros, use_surr_flu, 
             axis.title.x = element_text(size = 8),
             axis.ticks.x = element_line(size = 0.25)
         )
-    
+
     plot_filename <- file.path(
         script_dir, 'plots',
         sprintf(
-            'us=%d-rz=%d-usf=%d-use=%d-ulf=%d-lt=%d.pdf',
-            use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, use_lagtest
+            'us=%d-rz=%d-usf=%d-use=%d-ulf=%d-fic=%d-lt=%d.pdf',
+            use_splines, remove_zeros, use_surr_flu, use_surr_env, use_log_flu, flu_is_cause, use_lagtest
         )
     )
     ggsave(plot_filename, p, width = 4.5, height = 4)

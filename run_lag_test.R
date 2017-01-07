@@ -15,7 +15,6 @@ main <- function() {
     df_in <- read.csv(file.path(script_dir, 'pnas.1607747113.sd01.txt')) %>% filter(year >= 1996)
     
     db_out <- dbConnect(SQLite(), file.path(script_dir, 'output_db_all.sqlite'))
-    dbGetQuery(db_out, 'DROP TABLE IF EXISTS ccm_lagtest')
     dbGetQuery(db_out, '
        CREATE TABLE ccm_lagtest (
            remove_zeros, use_log_flu, cause, effect, country,

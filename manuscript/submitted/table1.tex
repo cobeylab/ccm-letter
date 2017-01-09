@@ -1,0 +1,41 @@
+\documentclass[11pt]{article}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\begin{document}
+
+\begin{table}
+\centering
+\caption{
+    \label{tab:byvariant}
+    Summary of CCM results for whether influenza drives environmental variables, and vice versa, in different countries.
+}
+\begin{tabularx}{\textwidth}{ c | c | c | c | c | c | c}
+\multicolumn{3}{c}{} & \multicolumn{2}{c}{\# sig. of 104} & \multicolumn{2}{c}{\# sig. of 104 (lag test)} \\
+\hline
+Flu surr. & Env. surr. & Log-flu & flu $\rightarrow$ env. & env. $\rightarrow$ flu. & flu $\rightarrow$ env. & env. $\rightarrow$ flu. \\
+\hline
+& X &  & 14 & 27 & 8 & 14 \\
+X &  &  & 53 & 14 & 25 & 6 \\
+X & X &  & 56 & 22 & 27 & 10 \\
+& X & X & 17 & 31 & 11 & 15 \\
+X &  & X & 55 & 29 & 25 & 13 \\
+X & X & X & 52 & 34 & 23 & 15 \\
+\end{tabularx}
+\end{table}
+
+\noindent Tests used surrogates for influenza and/or environmental variables,
+and either untransformed or log-transformed influenza incidence.
+Results are shown with and without the requirement that the maximum cross-correlation occur in the correct temporal direction.
+Surrogates were constructed using splines, and analysis was restricted to periods when influenza was present.
+Numbers are out of a total of 104 tests (26 countries, 4 tests each)
+
+\end{document}

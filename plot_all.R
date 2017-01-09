@@ -34,25 +34,34 @@ plot_model_summary <- function(script_dir, db) {
         dir.create('plots')
     }
     
-    df <- dbGetQuery(db, '
+    query_format <- '
         SELECT
             ccm_rho.use_surr_flu, ccm_rho.use_surr_env, ccm_rho.use_log_flu,
-            COUNT(*) AS n,
-            SUM(rho_sig_95) AS n_sig_95,
-            SUM(rho_sig_95 AND (best_lag <= 0)) AS n_sig_95_lag
+        SUM(rho_sig_95) AS n_sig_95,
+        SUM(rho_sig_95 AND (best_lag <= 0)) AS n_sig_95_lag
         FROM ccm_rho, ccm_lagtest
         WHERE
-            ccm_rho.cause = "flu" AND ccm_lagtest.cause = "flu"
+            ccm_rho.%s = "flu" AND ccm_lagtest.%s = "flu"
             AND ccm_rho.use_splines = 1
             AND ccm_rho.remove_zeros = 1 AND ccm_lagtest.remove_zeros = 1
             AND ccm_rho.use_log_flu = ccm_lagtest.use_log_flu
-            AND ccm_rho.effect = ccm_lagtest.effect
+            AND ccm_rho.%s = ccm_lagtest.%s
             AND ccm_rho.country = ccm_lagtest.country
         GROUP BY
             ccm_rho.use_surr_flu, ccm_rho.use_surr_env, ccm_rho.use_log_flu
         ORDER BY
             ccm_rho.use_log_flu, ccm_rho.use_surr_flu, ccm_rho.use_surr_env
-    ')
+    '
+    
+    df_flucause <- dbGetQuery(
+        db,
+        sprintf(query_format, 'cause', 'cause', 'effect', 'effect')
+    )
+    df_envcause <- dbGetQuery(
+        db,
+        sprintf(query_format, 'effect', 'effect', 'cause', 'cause')
+    )
+    stopifnot(nrow(df_flucause) == nrow(df_envcause))
     
     table_file <- file(file.path(script_dir, 'summary-table.tex'), 'w')
     format_bool <- function(x) {
@@ -63,12 +72,15 @@ plot_model_summary <- function(script_dir, db) {
             return('')
         }
     }
-    for(i in 1:nrow(df)) {
+    for(i in 1:nrow(df_flucause)) {
         cat(
             sprintf(
-                '%s & %s & %s & %d & %d \\\\\n',
-                format_bool(df$use_surr_flu[i]), format_bool(df$use_surr_env[i]), format_bool(df$use_log_flu[i]),
-                df$n_sig_95[i], df$n_sig_95_lag[i]
+                '%s & %s & %s & %d & %d & %d & %d \\\\\n',
+                format_bool(df_flucause$use_surr_flu[i]),
+                format_bool(df_flucause$use_surr_env[i]),
+                format_bool(df_flucause$use_log_flu[i]),
+                df_flucause$n_sig_95[i], df_envcause$n_sig_95[i],
+                df_flucause$n_sig_95_lag[i], df_envcause$n_sig_95_lag[i]
             ),
             file = table_file
         )
